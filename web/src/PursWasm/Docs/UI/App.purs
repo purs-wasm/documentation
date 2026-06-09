@@ -28,6 +28,8 @@ import Web.UIEvent.KeyboardEvent as KE
 labelOf :: Route -> String
 labelOf = case _ of
   Home -> "Purs-wasm"
+  Installation -> "Installation"
+  DevelopersGuide -> "Developer's Guide"
   RuntimeRepresentation -> "Runtime Representations"
   CompilationPipeline -> "Compilation Pipeline"
   SupportedFeatures -> "Supported Features"
@@ -97,12 +99,20 @@ make = Hooks.component \_ _ -> Hooks.do
       , HH.main [ HP.class_ $ ClassName "flex-1 min-h-0 flex" ]
           [ HH.aside [ HP.class_ $ ClassName "w-64 shrink-0 min-h-0 overflow-y-auto border-r border-border bg-surface py-6" ]
               [ HH.nav [ HP.class_ $ ClassName "flex flex-col gap-0.5 px-3" ]
-                  [ sideMenuHeadline "Developer's Guide"
+                  [ sideMenuHeadline "Getting Started"
+                  , sideMenuItem Installation
+                  , sideMenuItem JsInterop
+                  , spacer
+                  , HH.button
+                      [ HP.class_ $ ClassName "block w-full text-left px-3 pt-2 pb-1.5 text-sm font-semibold uppercase tracking-wider text-brand hover:opacity-70 transition-opacity cursor-pointer"
+                      , HP.type_ HP.ButtonButton
+                      , HE.onClick \_ -> st.navigateTo DevelopersGuide
+                      ]
+                      [ HH.text "Developer's Guide" ]
                   , sideMenuItem SupportedFeatures
                   , sideMenuItem RuntimeRepresentation
                   , sideMenuItem CompilationPipeline
                   , sideMenuItem Optimizations
-                  , sideMenuItem JsInterop
                   , spacer
                   , HH.div [ HP.class_ $ ClassName "px-3 text-xs leading-relaxed text-fg-muted" ]
                       [ HH.text "MIT licensed"
@@ -163,6 +173,8 @@ make = Hooks.component \_ _ -> Hooks.do
     Nothing -> HH.text "Page not found"
     Just rt -> case rt of
       Home -> HH.slot_ (Proxy :: _ "home") unit Home.make {}
+      Installation -> renderMarkdownView Installation Content.installation
+      DevelopersGuide -> renderMarkdownView DevelopersGuide Content.developersGuide
       SupportedFeatures -> renderMarkdownView SupportedFeatures Content.supportedFeatures
       RuntimeRepresentation -> renderMarkdownView RuntimeRepresentation Content.runtimeRepresentation
       CompilationPipeline -> renderMarkdownView CompilationPipeline Content.compilationPipeline

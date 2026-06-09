@@ -205,7 +205,7 @@
   background: #161b22;
 }
 .dark .md-doc pre.shiki {
-  background-color: #161b22 !important;
+  background-color: #2a313c !important;
 }
 .dark .md-doc pre.shiki span {
   color: var(--shiki-dark) !important;

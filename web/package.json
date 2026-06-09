@@ -6,7 +6,8 @@
     "test": "spago test",
     "format": "purs-tidy format-in-place src",
     "check": "purs-tidy check src",
-    "dev": "spago build && vite",
+    "sync": "bash ../scripts/sync-docs.sh",
+    "dev": "pnpm run sync && spago build && vite",
     "build": "spago build && vite build"
   },
   "devDependencies": {

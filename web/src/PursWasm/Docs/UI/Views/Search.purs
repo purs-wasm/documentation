@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Array as Array
 import Data.String (trim)
-import Halogen (ClassName(..))
+import Halogen (ClassName(..), PropName(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
@@ -57,8 +57,14 @@ make = Hooks.component \_ { query } -> Hooks.do
       [ HP.class_ $ ClassName "block py-2 px-3 -mx-3 rounded-md hover:bg-accent-soft transition-colors"
       , HP.href (withBase r.path <> "#" <> r.anchor)
       ]
-      [ HH.div [ HP.class_ $ ClassName "font-medium text-accent" ]
-          [ HH.text r.heading ]
-      , HH.p [ HP.class_ $ ClassName "mt-0.5 text-sm text-fg-muted leading-snug" ]
-          [ HH.text r.snippet ]
+      [ HH.div
+          [ HP.class_ $ ClassName "font-medium text-accent"
+          , HP.prop (PropName "innerHTML") r.headingHtml
+          ]
+          []
+      , HH.p
+          [ HP.class_ $ ClassName "mt-0.5 text-sm text-fg-muted leading-snug"
+          , HP.prop (PropName "innerHTML") r.snippetHtml
+          ]
+          []
       ]

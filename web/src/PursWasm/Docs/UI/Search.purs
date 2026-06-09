@@ -8,7 +8,8 @@ type SearchResult =
   , anchor :: String
   , docTitle :: String
   , heading :: String
-  , snippet :: String
+  , headingHtml :: String
+  , snippetHtml :: String
   }
 
 foreign import searchImpl :: String -> Array SearchResult

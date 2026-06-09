@@ -10,3 +10,17 @@ export const scrollToCurrentHash = () => {
     if (el) el.scrollIntoView({ block: "start" });
   });
 };
+
+// Root-absolute links authored in the Markdown (e.g. /dev/optimizations.md) are
+// missing the deploy base path, so prefix it here after the HTML is injected.
+// Idempotent, and a no-op when served from the root.
+export const prefixInternalLinks = () => {
+  const base = (import.meta.env && import.meta.env.BASE_URL) || "/";
+  if (base === "/") return;
+  const prefix = base.replace(/\/$/, "");
+  document.querySelectorAll(".md-doc a[href^='/']").forEach((a) => {
+    const href = a.getAttribute("href");
+    if (href.startsWith("//") || href.startsWith(prefix + "/")) return;
+    a.setAttribute("href", prefix + href);
+  });
+};

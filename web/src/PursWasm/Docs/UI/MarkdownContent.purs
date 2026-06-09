@@ -9,3 +9,7 @@ foreign import supportedFeatures :: String
 foreign import interop :: String
 
 foreign import optimizations :: String
+
+foreign import developersGuide :: String
+
+foreign import installation :: String

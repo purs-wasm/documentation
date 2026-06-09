@@ -13,14 +13,17 @@ import Halogen.Hooks (useLifecycleEffect)
 import Halogen.Hooks as Hooks
 
 foreign import scrollToCurrentHash :: Effect Unit
+foreign import prefixInternalLinks :: Effect Unit
 
 type Input = { html :: String }
 
 make :: forall q o m. MonadEffect m => H.Component q Input o m
 make = Hooks.component \_ { html } -> Hooks.do
-  -- The content is injected via innerHTML, so scroll to the URL hash (if any)
-  -- once the document is in the DOM, after the route resolves.
+  -- The content is injected via innerHTML, so once it is in the DOM (after the
+  -- route resolves) fix up internal links for the base path and scroll to the
+  -- URL hash, if any.
   useLifecycleEffect do
+    liftEffect prefixInternalLinks
     liftEffect scrollToCurrentHash
     pure Nothing
 

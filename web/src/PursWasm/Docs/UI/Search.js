@@ -15,13 +15,25 @@ const mini = new MiniSearch({
 });
 mini.addAll(index);
 
+const escapeHtml = (s) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Escape the text, then wrap occurrences of the matched terms in <mark>.
+const highlight = (text, terms) => {
+  const esc = escapeHtml(text);
+  if (!terms.length) return esc;
+  const re = new RegExp("(" + terms.map(escapeRegex).join("|") + ")", "gi");
+  return esc.replace(re, "<mark>$1</mark>");
+};
+
 // A short context window around the first matching term in the section body.
-const snippetOf = (text, query) => {
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+const snippetOf = (text, terms) => {
   const lower = text.toLowerCase();
   let pos = -1;
   for (const t of terms) {
-    const i = lower.indexOf(t);
+    const i = lower.indexOf(t.toLowerCase());
     if (i >= 0 && (pos < 0 || i < pos)) pos = i;
   }
   const start = pos < 0 ? 0 : Math.max(0, pos - 40);
@@ -34,11 +46,15 @@ const snippetOf = (text, query) => {
 export const searchImpl = (query) => {
   const q = query.trim();
   if (!q) return [];
-  return mini.search(q).slice(0, 40).map((r) => ({
-    path: r.path,
-    anchor: r.anchor,
-    docTitle: r.docTitle,
-    heading: r.heading,
-    snippet: snippetOf(r.text || "", q),
-  }));
+  return mini.search(q).slice(0, 40).map((r) => {
+    const terms = r.terms && r.terms.length ? r.terms : q.split(/\s+/).filter(Boolean);
+    return {
+      path: r.path,
+      anchor: r.anchor,
+      docTitle: r.docTitle,
+      heading: r.heading,
+      headingHtml: highlight(r.heading, terms),
+      snippetHtml: highlight(snippetOf(r.text || "", terms), terms),
+    };
+  });
 };
