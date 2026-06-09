@@ -1,0 +1,12 @@
+node_modules
+.spago
+output
+output-es
+.psc-ide-port
+
+/web/node_modules
+/web/dist
+/web/docs/
+
+# macOS
+**/.DS_Store

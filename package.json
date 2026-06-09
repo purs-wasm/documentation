@@ -1,0 +1,5 @@
+{
+  "name": "@purs-wasm/documentation",
+  "type": "module",
+  "private": true
+}

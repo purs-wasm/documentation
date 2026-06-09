@@ -1,0 +1,21 @@
+package:
+  name: web
+  dependencies:
+    - aff
+    - arrays
+    - effect
+    - halogen
+    - halogen-helix
+    - halogen-hooks
+    - js-promise-aff
+    - prelude
+    - routing
+    - routing-duplex
+    - strings
+    - tuples
+    - web-uievents
+  test:
+    main: Test.PursWasm.Docs.Main
+    dependencies:
+      - spec 
+      - spec-node
