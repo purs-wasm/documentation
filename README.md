@@ -7,7 +7,6 @@ source repository under `docs/`, which is the single source of truth.
 This repo only holds the site tooling. `scripts/sync-docs.sh` fetches the latest
 Markdown on demand, renders it to HTML with [`marked`](https://marked.js.org/),
 and writes the fragments into `web/docs/` for the Halogen SPA to load and inject.
-There is no double maintenance — `web/docs/` is generated and git-ignored.
 
 ## Syncing the docs
 
