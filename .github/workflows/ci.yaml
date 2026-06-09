@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+# Cancel a superseded run when new commits land on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Decide whether the heavy build needs to run: true iff something other than docs /
+  # README changed.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '**'
+              - '!README.md'
+
+  ci:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [web]
+    steps:
+      # Setup Nix envirionment
+      - uses: actions/checkout@v5
+      # v30 ships Nix >= 2.18, required by the pinned nixos-25.11 nixpkgs.
+      - uses: cachix/install-nix-action@v30
+        with:
+          # No nixpkgs channel pin here: the toolchain comes from `nix develop`,
+          # so flake.nix + flake.lock are the single source of truth.
+          extra_nix_config: experimental-features = nix-command flakes
+      - uses: cachix/cachix-action@v17
+        with:
+          name: katsujukou-github
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - uses: nicknovitski/nix-develop@v1
+
+      # Run CI jobs
+      - name: Install
+        run: pnpm install
+
+      - name: Compile
+        run: pnpm -F './${{ matrix.target}}' run compile
+
+      - name: Test
+        run: pnpm -F './${{ matrix.target }}' run test
+
+      - name: Check
+        run: pnpm -F './${{ matrix.target }}' run check
+
+  # The single required status check. Always runs; green when the matrix passed OR was
+  # skipped (docs-only), red when any matrix leg failed or was cancelled. Point branch
+  # protection at THIS job (`ci-gate`), not the matrix legs.
+  ci-gate:
+    needs: [ci]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gate on the matrix result
+        run: |
+          result='${{ needs.ci.result }}'
+          if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+            echo "::error::CI matrix did not pass (result: $result)"
+            exit 1
+          fi
+          echo "CI gate green (matrix result: $result)"
+
+  # Build the static site and publish it to GitHub Pages. Project page, served
+  # at https://purs-wasm.github.io/documentation/. Runs only on pushes to the
+  # default branch, after the CI gate is green.
+  deploy:
+    needs: ci-gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: experimental-features = nix-command flakes
+      - uses: cachix/cachix-action@v17
+        with:
+          name: katsujukou-github
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+      - uses: nicknovitski/nix-develop@v1
+
+      - name: Install
+        run: pnpm install
+
+      # Fetch the latest docs from the source repo and render them to HTML +
+      # search index (web/docs is git-ignored, so it must be generated here).
+      - name: Sync docs
+        run: scripts/sync-docs.sh
+
+      - name: Build site
+        run: pnpm -F './web' run build
+
+      # GitHub Pages has no SPA fallback: serve the app for unknown deep links by
+      # making 404.html a copy of index.html. .nojekyll keeps asset paths intact.
+      - name: SPA fallback + disable Jekyll
+        run: |
+          cp web/dist/index.html web/dist/404.html
+          touch web/dist/.nojekyll
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

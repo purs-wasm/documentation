@@ -3,7 +3,7 @@ node_modules
 output
 output-es
 .psc-ide-port
-
+.spec-results
 /web/node_modules
 /web/dist
 /web/docs/
