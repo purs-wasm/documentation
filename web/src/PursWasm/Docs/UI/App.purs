@@ -107,7 +107,7 @@ make = Hooks.component \_ _ -> Hooks.do
                   , HH.div [ HP.class_ $ ClassName "px-3 text-xs leading-relaxed text-fg-muted" ]
                       [ HH.text "MIT licensed"
                       , HH.br_
-                      , HH.text "© 2026 Katsujukou Kineya" 
+                      , HH.text "© 2026 Katsujukou Kineya"
                       ]
                   ]
               ]
