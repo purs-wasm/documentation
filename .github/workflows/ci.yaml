@@ -111,7 +111,7 @@ jobs:
       # Fetch the latest docs from the source repo and render them to HTML +
       # search index (web/docs is git-ignored, so it must be generated here).
       - name: Sync docs
-        run: scripts/sync-docs.sh
+        run: pnpm -F './web' run sync
 
       - name: Build site
         run: pnpm -F './web' run build
