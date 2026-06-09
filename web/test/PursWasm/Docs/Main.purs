@@ -17,13 +17,13 @@ import Test.Spec.Runner.Node (runSpecAndExitProcess)
 allRoutes :: Array Route
 allRoutes =
   [ Home
-  , GettingStarted
+  , Installation
+  , JsInterop
   , DevelopersGuide
   , SupportedFeatures
   , RuntimeRepresentation
   , CompilationPipeline
   , Optimizations
-  , JsInterop
   , Search { q: "effect monad" }
   ]
 
@@ -36,7 +36,7 @@ main = runSpecAndExitProcess [ consoleReporter ] do
 
     it "prints the expected paths" do
       RD.print route Home `shouldEqual` "/"
-      RD.print route GettingStarted `shouldEqual` "/getting-started"
+      RD.print route Installation `shouldEqual` "/installation"
       RD.print route DevelopersGuide `shouldEqual` "/dev"
       RD.print route Optimizations `shouldEqual` "/dev/optimizations.md"
       RD.print route (Search { q: "x y" }) `shouldEqual` "/search?q=x%20y"
