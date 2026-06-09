@@ -63,8 +63,8 @@ make = Hooks.component \_ _ -> Hooks.do
     HH.div [ HP.class_ $ ClassName "flex flex-col h-screen bg-base text-fg" ]
       [ HH.header [ HP.class_ $ ClassName "shrink-0 bg-header text-brand border-b border-border" ]
           [ HH.div [ HP.class_ $ ClassName "flex items-center justify-between h-14 px-9" ]
-              [ HH.div 
-                  [ HP.class_ $ ClassName "flex items-center gap-5 font-mono font-semibold tracking-tight text-[20px] cursor-pointer" 
+              [ HH.div
+                  [ HP.class_ $ ClassName "flex items-center gap-5 font-mono font-semibold tracking-tight text-[20px] cursor-pointer"
                   , HE.onClick \_ -> st.navigateTo Home
                   ]
                   [ HH.img [ HP.src (Base.asset "emblem.svg"), HP.alt "purs-wasm", HP.class_ $ ClassName "w-6 h-6 rounded-sm" ]
