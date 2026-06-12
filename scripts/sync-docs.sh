@@ -28,22 +28,22 @@
 #
 # Environment variables:
 #   DOCS_REPO    Git URL of the source repo
-#                (default: https://github.com/katsujukou/purescript-backend-wasm.git)
+#                (default: https://github.com/purs-wasm/purescript-backend-wasm.git)
 #   DOCS_REF     Branch, tag, or commit to fetch (default: main; overridden by $1)
 #   DOCS_SUBDIR  Subdirectory in the source repo to sync (default: docs)
 #   DOCS_DEST    Destination for rendered HTML (default: web/docs)
 #   DOCS_LOCAL   Path to a local clone of the source repo. When set, docs are
 #                rendered from there instead of cloning over the network.
 #   BENCH_BASE   Base URL the benchmark images are published at
-#                (default: https://katsujukou.github.io/purescript-backend-wasm)
+#                (default: https://purs-wasm.github.io/purescript-backend-wasm)
 #   BENCH_DEST   Destination for downloaded images (default: web/public/images/bench)
 
 set -euo pipefail
 
-DOCS_REPO="${DOCS_REPO:-https://github.com/katsujukou/purescript-backend-wasm.git}"
+DOCS_REPO="${DOCS_REPO:-https://github.com/purs-wasm/purescript-backend-wasm.git}"
 DOCS_REF="${1:-${DOCS_REF:-main}}"
 DOCS_SUBDIR="${DOCS_SUBDIR:-docs}"
-BENCH_BASE="${BENCH_BASE:-https://katsujukou.github.io/purescript-backend-wasm}"
+BENCH_BASE="${BENCH_BASE:-https://purs-wasm.github.io/purescript-backend-wasm}"
 
 # Resolve paths relative to the repo root (the parent of scripts/).
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -89,7 +89,10 @@ sync_bench() {
   local ok=0 miss=0
   while IFS= read -r name; do
     [ -z "$name" ] && continue
-    if curl -fsSL "$BENCH_BASE/$name" -o "$BENCH_DEST/$name" 2>/dev/null; then
+    # Retry transient failures (GitHub Pages occasionally rate-limits/resets) so a
+    # blip doesn't leave a broken image on the deployed site.
+    if curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors \
+      "$BENCH_BASE/$name" -o "$BENCH_DEST/$name" 2>/dev/null; then
       ok=$((ok + 1))
     else
       rm -f "$BENCH_DEST/$name"

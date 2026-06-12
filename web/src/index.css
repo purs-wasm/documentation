@@ -25,6 +25,8 @@
   --color-fg-sstrong: #7452d6;
   --color-fg-muted: #59636e;
   --color-brand: #7452d6;       /* logo / h1 / sidebar headline */
+  --color-purs: #14161A;
+  --color-wasm: #654ff0;
 }
 
 .dark {
@@ -39,6 +41,8 @@
   --color-fg-strong: #f0f6fc;
   --color-fg-muted: #8b949e;
   --color-brand: #b69bff;
+  --color-purs: #EBE9E5;
+  --color-wasm: #7f6cfb;
 }
 
 @layer base {
@@ -164,6 +168,22 @@
 }
 .md-doc blockquote p { margin: 0.3rem 0; }
 
+/* `> **Note**` callouts: the bold "Note" is replaced (in render-docs.mjs) by this
+   info icon. Drawn as a mask tinted with the accent color, so it adapts to light
+   and dark automatically (the "i" counter shows the blockquote background). */
+.md-doc blockquote.note .note-icon {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.22em;
+  margin-right: 0.35em;
+  background-color: var(--color-accent);
+  -webkit-mask: center / contain no-repeat;
+  mask: center / contain no-repeat;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z'/%3E%3C/svg%3E");
+}
+
 .md-doc code {
   font-family: var(--font-mono);
   font-size: 0.85em;
@@ -237,3 +257,31 @@
 .dark .md-doc tr:nth-child(even) td { background: #131820; }
 
 .md-doc img { max-width: 100%; border-radius: 0.5rem; }
+.md-doc img.zoomable { cursor: zoom-in; transition: opacity 0.15s ease; }
+.md-doc img.zoomable:hover { opacity: 0.85; }
+
+/* Click-to-zoom lightbox (created imperatively in MarkdownView.js). */
+.img-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.8);
+  cursor: zoom-out;
+  animation: lightbox-fade 0.12s ease;
+}
+.img-lightbox img {
+  max-width: 95vw;
+  max-height: 95vh;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  background: #fff;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+@keyframes lightbox-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

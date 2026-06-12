@@ -27,4 +27,4 @@ Adding WebAssembly as a compilation target for PureScript is a big challenge, an
 Why the current `purs-wasm` compiler behaves the way it does — and why the
 competing alternatives were not chosen — is described in detail in these ADRs.
 If you are interested, see
-[https://github.com/katsujukou/purescript-backend-wasm/tree/main/docs/design-decisions](https://github.com/katsujukou/purescript-backend-wasm/tree/main/docs/design-decisions).
+[https://github.com/purs-wasm/purescript-backend-wasm/tree/main/docs/design-decisions](https://github.com/purs-wasm/purescript-backend-wasm/tree/main/docs/design-decisions).

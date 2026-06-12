@@ -65,8 +65,9 @@ const SECTIONS = [
     title: "Getting Started",
     dir: "getting-started",
     prefix: "/getting-started",
-    landing: { file: "overview.md" },
+    landing: { content: "getting-started.md" },
     pages: [
+      { file: "overview.md", nav: "Overview" },
       { file: "differences-to-PS-for-JS.md", nav: "Differences from JS" },
       { file: "ffi-and-js-interop.md", nav: "FFI & JS Interop" },
       { file: "module-resolution-and-ulib.md", nav: "Modules & ulib" },
@@ -91,7 +92,7 @@ const SECTIONS = [
 
 // Excluded docs (e.g. design-decisions/) are not part of the site; links to
 // them are rewritten to the source repo on GitHub instead of 404-ing.
-const GH_BLOB = "https://github.com/katsujukou/purescript-backend-wasm/blob/main/docs";
+const GH_BLOB = "https://github.com/purs-wasm/purescript-backend-wasm/blob/main/docs";
 
 // docs-relative markdown path (e.g. "developers-guide/interop.md") -> app route.
 // A section's landing file maps to the prefix root; other pages drop the
@@ -118,6 +119,15 @@ function rewriteLinks(html, fileDir) {
     if (rel.startsWith("design-decisions/")) return `href="${GH_BLOB}/${rel}${frag}"`;
     return whole;
   });
+}
+
+// Turn `> **Note** …` callouts into an icon: tag the blockquote `note` and swap
+// the leading bold "Note" label for an info icon span (styled/themed in index.css).
+function decorateNotes(html) {
+  return html.replace(
+    /<blockquote>\s*<p><strong>Note<\/strong>/g,
+    '<blockquote class="note">\n<p><span class="note-icon" role="img" aria-label="Note"></span>',
+  );
 }
 
 const highlighter = await createHighlighter({
@@ -196,7 +206,7 @@ const exists = (p) => fs.stat(p).then(() => true, () => false);
 // `linkDir` is given, cross-document .md links are rewritten to app routes.
 async function renderFile(srcFile, dst, relHtml, linkDir) {
   const md = await fs.readFile(srcFile, "utf8");
-  let html = marked.parse(md);
+  let html = decorateNotes(marked.parse(md));
   if (linkDir != null) html = rewriteLinks(html, linkDir);
   const out = path.join(dst, relHtml);
   await fs.mkdir(path.dirname(out), { recursive: true });

@@ -110,7 +110,7 @@ make = Hooks.component \_ _ -> Hooks.do
                       ]
                   , HH.a
                       [ HP.class_ $ ClassName "opacity-70 hover:opacity-100 transition-opacity"
-                      , HP.href "https://github.com/katsujukou/purescript-backend-wasm"
+                      , HP.href "https://github.com/purs-wasm/purescript-backend-wasm"
                       , HP.target "_blank"
                       , HP.rel "noopener noreferrer"
                       ]

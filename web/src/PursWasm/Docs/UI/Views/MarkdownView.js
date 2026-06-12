@@ -24,3 +24,48 @@ export const prefixInternalLinks = () => {
     a.setAttribute("href", prefix + href);
   });
 };
+
+// Click a benchmark chart to view it enlarged in a lightbox overlay. Scoped to
+// images served from images/bench/. Uses event delegation on the .md-doc root so
+// it covers the innerHTML-injected images and is cleaned up with it on unmount.
+const BENCH_IMG = 'img[src*="/images/bench/"]';
+
+export const enableImageZoom = () => {
+  const root = document.querySelector(".md-doc");
+  if (!root) return;
+  root.querySelectorAll(BENCH_IMG).forEach((img) => img.classList.add("zoomable"));
+  root.addEventListener("click", (e) => {
+    const img = e.target;
+    if (!img || img.tagName !== "IMG" || !img.matches(BENCH_IMG)) return;
+    openLightbox(img.currentSrc || img.src, img.alt || "");
+  });
+};
+
+const closeLightbox = () => {
+  const ex = document.querySelector(".img-lightbox");
+  if (!ex) return;
+  if (ex._onKey) document.removeEventListener("keydown", ex._onKey);
+  ex.remove();
+  document.body.style.overflow = "";
+};
+
+const openLightbox = (src, alt) => {
+  closeLightbox();
+  const overlay = document.createElement("div");
+  overlay.className = "img-lightbox";
+
+  const img = document.createElement("img");
+  img.src = src;
+  img.alt = alt;
+  overlay.appendChild(img);
+
+  const onKey = (e) => {
+    if (e.key === "Escape") closeLightbox();
+  };
+  overlay._onKey = onKey;
+  overlay.addEventListener("click", closeLightbox);
+  document.addEventListener("keydown", onKey);
+
+  document.body.appendChild(overlay);
+  document.body.style.overflow = "hidden";
+};

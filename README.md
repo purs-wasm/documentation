@@ -1,7 +1,7 @@
 # Documentation site for `purs-backend-wasm`
 
 The documentation content is **not** maintained here. It lives in the
-[`purescript-backend-wasm`](https://github.com/katsujukou/purescript-backend-wasm)
+[`purescript-backend-wasm`](https://github.com/purs-wasm/purescript-backend-wasm)
 source repository under `docs/`, which is the single source of truth.
 
 This repo only holds the site tooling. `scripts/sync-docs.sh` fetches the latest

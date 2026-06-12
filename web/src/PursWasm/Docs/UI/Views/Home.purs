@@ -12,6 +12,7 @@ import PursWasm.Docs.UI.Base (asset)
 
 make :: forall q i o m. MonadEffect m => H.Component q i o m
 make = Hooks.component \_ _ -> Hooks.do
+
   Hooks.pure (render {})
   where
   render _ = do
@@ -22,9 +23,30 @@ make = Hooks.component \_ _ -> Hooks.do
               , HP.alt "purs-wasm"
               , HP.class_ $ ClassName "w-14 h-14 rounded-lg mb-5 dark:invert"
               ]
-          , HH.h1 [ HP.class_ $ ClassName "text-3xl font-bold tracking-tight text-fg-strong" ]
-              [ HH.text "PureScript → WebAssembly" ]
-          , HH.p [ HP.class_ $ ClassName "mt-3 text-fg-muted leading-relaxed max-w-2xl" ]
-              [ HH.text "An experimental PureScript backend that compiles to WebAssembly GC. Browse the developer's guide to learn how the compiler represents values, lowers code, and stays fast." ]
+          , HH.h1
+              [ HP.class_ $ ClassName "text-3xl font-bold tracking-tight text-fg-strong" ]
+              [ HH.span []
+                  [ HH.span [ HP.class_ $ ClassName "text-purs" ] [ HH.text "PureScript" ]
+                  , HH.text " → "
+                  , HH.span [ HP.class_ $ ClassName "text-wasm" ] [ HH.text "WebAssembly" ]
+                  ]
+              ]
+          , HH.p
+              [ HP.class_ $ ClassName "mt-3 max-w-2xl" ]
+              [ HH.span [ HP.class_ $ ClassName "text-fg-muted leading-relaxed " ]
+                  [ HH.text
+                      "Purs-wasm is an experimental compiler from PureScript to WebAssembly. \
+                      \According to our benchmarks, the compiled wasm typically runs faster than \
+                      \the JavaScript emitted by both the stock PureScript compiler and "
+                  ]
+              , HH.a
+                  [ HP.href "https://github.com/aristanetworks/purescript-backend-optimizer"
+                  , HP.class_ $ ClassName "text-accent underline"
+                  , HP.target "_blank"
+                  , HP.rel "noopener noreferrer"
+                  ]
+                  [ HH.text "purs-backend-es" ]
+              ]
           ]
       ]
+

@@ -14,6 +14,7 @@ import Halogen.Hooks as Hooks
 
 foreign import scrollToCurrentHash :: Effect Unit
 foreign import prefixInternalLinks :: Effect Unit
+foreign import enableImageZoom :: Effect Unit
 
 type Input = { html :: String }
 
@@ -24,6 +25,7 @@ make = Hooks.component \_ { html } -> Hooks.do
   -- URL hash, if any.
   useLifecycleEffect do
     liftEffect prefixInternalLinks
+    liftEffect enableImageZoom
     liftEffect scrollToCurrentHash
     pure Nothing
 
