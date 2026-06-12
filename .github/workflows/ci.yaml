@@ -82,11 +82,17 @@ jobs:
           echo "CI gate green (matrix result: $result)"
 
   # Build the static site and publish it to GitHub Pages. Project page, served
-  # at https://purs-wasm.github.io/documentation/. Runs only on pushes to the
-  # default branch, after the CI gate is green.
+  # at https://purs-wasm.github.io/documentation/. Runs on the default branch
+  # after the CI gate is green — on a push here, a manual dispatch, or a
+  # `docs-updated` dispatch from the source repo (which re-syncs the upstream
+  # docs even though this repo didn't change).
   deploy:
     needs: ci-gate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' ||
+       github.event_name == 'workflow_dispatch' ||
+       github.event_name == 'repository_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: read

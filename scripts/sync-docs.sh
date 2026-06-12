@@ -17,8 +17,10 @@
 # Usage:
 #   scripts/sync-docs.sh                 # fetch from default repo @ main
 #   scripts/sync-docs.sh v1.2.0          # fetch a specific branch/tag/commit
-#   DOCS_LOCAL=~/Projects/purescript-backend-wasm scripts/sync-docs.sh
+#   scripts/sync-docs.sh -l ~/Projects/purescript-backend-wasm
 #                                        # render from a local clone (offline)
+#   DOCS_LOCAL=~/Projects/purescript-backend-wasm scripts/sync-docs.sh
+#                                        # same, via environment variable
 #
 # Benchmark images: the docs reference result charts at
 # /documentation/images/bench/<name>.png, served from this site's public assets.
@@ -34,14 +36,40 @@
 #   DOCS_DEST    Destination for rendered HTML (default: web/docs)
 #   DOCS_LOCAL   Path to a local clone of the source repo. When set, docs are
 #                rendered from there instead of cloning over the network.
+#                (the -l/--local flag sets this too, taking precedence.)
 #   BENCH_BASE   Base URL the benchmark images are published at
 #                (default: https://purs-wasm.github.io/purescript-backend-wasm)
 #   BENCH_DEST   Destination for downloaded images (default: web/public/images/bench)
 
 set -euo pipefail
 
+usage() {
+  cat >&2 <<'EOF'
+Usage: sync-docs.sh [-l|--local <dir>] [<ref>]
+  <ref>              git branch/tag/commit to fetch (default: main)
+  -l, --local <dir>  render from a local clone instead of fetching over the network
+  -h, --help         show this help
+EOF
+  exit "${1:-0}"
+}
+
+# Parse flags; the first non-flag positional is the git ref (branch/tag/commit).
+REF_ARG=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -l | --local)
+      [ $# -ge 2 ] || { printf '%s\n' "missing argument for $1" >&2; exit 2; }
+      DOCS_LOCAL="$2"; shift 2 ;;
+    --local=*) DOCS_LOCAL="${1#*=}"; shift ;;
+    --) shift ;; # drop a stray separator (e.g. forwarded by `pnpm run sync --`)
+    -h | --help) usage 0 ;;
+    -*) printf '%s\n' "unknown option: $1" >&2; usage 2 ;;
+    *) REF_ARG="$1"; shift ;;
+  esac
+done
+
 DOCS_REPO="${DOCS_REPO:-https://github.com/purs-wasm/purescript-backend-wasm.git}"
-DOCS_REF="${1:-${DOCS_REF:-main}}"
+DOCS_REF="${REF_ARG:-${DOCS_REF:-main}}"
 DOCS_SUBDIR="${DOCS_SUBDIR:-docs}"
 BENCH_BASE="${BENCH_BASE:-https://purs-wasm.github.io/purescript-backend-wasm}"
 
