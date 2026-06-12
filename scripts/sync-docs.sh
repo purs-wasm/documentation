@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 #
 # sync-docs.sh — Fetch the `docs/` directory from the purescript-backend-wasm
-# source repository, render each Markdown file to HTML with `marked`, and write
-# the result into the web app's `web/docs/` directory.
+# source repository and render it into the web app's `web/docs/` directory.
+#
+# The actual rendering (Markdown -> HTML via marked + shiki, plus a manifest.json
+# describing the section/page tree and a search-index.json) is done by the Node
+# renderer, which is *directory driven*: see web/scripts/render-docs.mjs for the
+# section table that maps each upstream subdir (getting-started/, developers-guide/)
+# to a site section. Adding a section there needs no change to this script.
 #
 # The Markdown is the single source of truth in the source repo; this site never
-# commits the docs (see .gitignore). The Halogen SPA loads the rendered HTML
-# fragments from web/docs/ and injects them into the page content. Run this
+# commits the docs (see .gitignore). The Halogen SPA loads the manifest + rendered
+# HTML fragments from web/docs/ to build its sidebar, routes, and content. Run this
 # before building/serving the site, or whenever you want the latest docs.
 #
 # Usage:
@@ -14,6 +19,12 @@
 #   scripts/sync-docs.sh v1.2.0          # fetch a specific branch/tag/commit
 #   DOCS_LOCAL=~/Projects/purescript-backend-wasm scripts/sync-docs.sh
 #                                        # render from a local clone (offline)
+#
+# Benchmark images: the docs reference result charts at
+# /documentation/images/bench/<name>.png, served from this site's public assets.
+# The images themselves are published on the source project's GitHub Pages, so we
+# discover the set referenced by the rendered docs and download each one into
+# web/public/images/bench/ (git-ignored — generated, like web/docs).
 #
 # Environment variables:
 #   DOCS_REPO    Git URL of the source repo
@@ -23,16 +34,21 @@
 #   DOCS_DEST    Destination for rendered HTML (default: web/docs)
 #   DOCS_LOCAL   Path to a local clone of the source repo. When set, docs are
 #                rendered from there instead of cloning over the network.
+#   BENCH_BASE   Base URL the benchmark images are published at
+#                (default: https://katsujukou.github.io/purescript-backend-wasm)
+#   BENCH_DEST   Destination for downloaded images (default: web/public/images/bench)
 
 set -euo pipefail
 
 DOCS_REPO="${DOCS_REPO:-https://github.com/katsujukou/purescript-backend-wasm.git}"
 DOCS_REF="${1:-${DOCS_REF:-main}}"
 DOCS_SUBDIR="${DOCS_SUBDIR:-docs}"
+BENCH_BASE="${BENCH_BASE:-https://katsujukou.github.io/purescript-backend-wasm}"
 
 # Resolve paths relative to the repo root (the parent of scripts/).
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DOCS_DEST="${DOCS_DEST:-$REPO_ROOT/web/docs}"
+BENCH_DEST="${BENCH_DEST:-$REPO_ROOT/web/public/images/bench}"
 
 log() { printf '\033[1;34m[sync-docs]\033[0m %s\n' "$*"; }
 err() { printf '\033[1;31m[sync-docs]\033[0m %s\n' "$*" >&2; }
@@ -55,6 +71,33 @@ render_tree() {
   rm -rf "$dst"
   mkdir -p "$dst"
   node "$RENDERER" "$src" "$dst"
+}
+
+# Download every benchmark image referenced by the rendered docs from BENCH_BASE
+# into BENCH_DEST. Individual misses are warned about but don't fail the sync, so
+# a not-yet-published chart never blocks a deploy.
+sync_bench() {
+  local names
+  names="$(grep -rho 'images/bench/[A-Za-z0-9._-]*\.png' "$DOCS_DEST" 2>/dev/null \
+    | sed 's#.*/##' | sort -u)"
+  if [ -z "$names" ]; then
+    log "No benchmark images referenced in docs; skipping image sync"
+    return
+  fi
+  rm -rf "$BENCH_DEST"
+  mkdir -p "$BENCH_DEST"
+  local ok=0 miss=0
+  while IFS= read -r name; do
+    [ -z "$name" ] && continue
+    if curl -fsSL "$BENCH_BASE/$name" -o "$BENCH_DEST/$name" 2>/dev/null; then
+      ok=$((ok + 1))
+    else
+      rm -f "$BENCH_DEST/$name"
+      err "could not fetch benchmark image: $BENCH_BASE/$name (skipping)"
+      miss=$((miss + 1))
+    fi
+  done <<<"$names"
+  log "Downloaded $ok benchmark image(s) into $BENCH_DEST ($miss missing)"
 }
 
 if [ -n "${DOCS_LOCAL:-}" ]; then
@@ -102,5 +145,8 @@ cat >"$DOCS_DEST/.synced-from" <<EOF
 source = "$SOURCE_DESC"
 ref    = "$DOCS_REF"
 EOF
+
+log "Downloading benchmark images referenced by the docs from $BENCH_BASE"
+sync_bench
 
 log "Done. Rendered $(find "$DOCS_DEST" -name '*.html' | wc -l | tr -d ' ') HTML files into $DOCS_DEST"

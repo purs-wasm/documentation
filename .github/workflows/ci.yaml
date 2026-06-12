@@ -110,8 +110,9 @@ jobs:
         run: pnpm install
 
       # Fetch the latest docs from the source repo and render them to HTML +
-      # search index (web/docs is git-ignored, so it must be generated here).
-      - name: Sync docs
+      # search index, and download the benchmark images the docs reference into
+      # web/public/images/bench/. Both are git-ignored, so generated here.
+      - name: Sync docs + benchmark images
         run: pnpm -F './web' run sync
 
       - name: Build site

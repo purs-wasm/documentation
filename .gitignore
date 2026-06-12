@@ -7,6 +7,7 @@ output-es
 /web/node_modules
 /web/dist
 /web/docs/
+/web/public/images/bench/
 
 # macOS
 **/.DS_Store

@@ -2,7 +2,8 @@ module PursWasm.Docs.UI.App where
 
 import Prelude
 
-import Data.Maybe (Maybe(..))
+import Data.Array (foldMap)
+import Data.Maybe (Maybe(..), maybe)
 import Data.Tuple.Nested ((/\))
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (liftEffect)
@@ -15,8 +16,8 @@ import Halogen.Hooks (useLifecycleEffect)
 import Halogen.Hooks as Hooks
 import PursWasm.Docs.UI.Base as Base
 import PursWasm.Docs.UI.Hooks.UseNavigate (useNavigate)
-import PursWasm.Docs.UI.MarkdownContent as Content
-import PursWasm.Docs.UI.Route (Route(..), route)
+import PursWasm.Docs.UI.Manifest as Manifest
+import PursWasm.Docs.UI.Route (Route(..), docRoute, route, routePath)
 import PursWasm.Docs.UI.SideMenuItem as SideMenuItem
 import PursWasm.Docs.UI.Theme as Theme
 import PursWasm.Docs.UI.Views.Home as Home
@@ -24,18 +25,6 @@ import PursWasm.Docs.UI.Views.MarkdownView as MarkdownView
 import PursWasm.Docs.UI.Views.Search as SearchView
 import Type.Proxy (Proxy(..))
 import Web.UIEvent.KeyboardEvent as KE
-
-labelOf :: Route -> String
-labelOf = case _ of
-  Home -> "Purs-wasm"
-  Installation -> "Installation"
-  DevelopersGuide -> "Developer's Guide"
-  RuntimeRepresentation -> "Runtime Representations"
-  CompilationPipeline -> "Compilation Pipeline"
-  SupportedFeatures -> "Supported Features"
-  Optimizations -> "Optimizations"
-  JsInterop -> "JS ↔ WASM interop"
-  Search _ -> "Search"
 
 make :: forall q i o m. MonadAff m => H.Component q i o m
 make = Hooks.component \_ _ -> Hooks.do
@@ -144,27 +133,15 @@ make = Hooks.component \_ _ -> Hooks.do
               , HE.onClick \_ -> Hooks.put st.menuOpenId false
               ]
               [ HH.nav [ HP.class_ $ ClassName "flex flex-col gap-0.5 px-3" ]
-                  [ sideMenuHeadline "Getting Started"
-                  , sideMenuItem Installation
-                  , sideMenuItem JsInterop
-                  , spacer
-                  , HH.button
-                      [ HP.class_ $ ClassName "block w-full text-left px-3 pt-2 pb-1.5 text-sm font-semibold uppercase tracking-wider text-brand hover:opacity-70 transition-opacity cursor-pointer"
-                      , HP.type_ HP.ButtonButton
-                      , HE.onClick \_ -> st.navigateTo DevelopersGuide
-                      ]
-                      [ HH.text "Developer's Guide" ]
-                  , sideMenuItem SupportedFeatures
-                  , sideMenuItem RuntimeRepresentation
-                  , sideMenuItem CompilationPipeline
-                  , sideMenuItem Optimizations
-                  , spacer
-                  , HH.div [ HP.class_ $ ClassName "px-3 text-xs leading-relaxed text-fg-muted" ]
-                      [ HH.text "MIT licensed"
-                      , HH.br_
-                      , HH.text "© 2026 Katsujukou Kineya"
-                      ]
-                  ]
+                  ( foldMap (renderSection st) Manifest.sections
+                      <>
+                        [ HH.div [ HP.class_ $ ClassName "px-3 pt-3 text-xs leading-relaxed text-fg-muted" ]
+                            [ HH.text "MIT licensed"
+                            , HH.br_
+                            , HH.text "© 2026 Katsujukou Kineya"
+                            ]
+                        ]
+                  )
               ]
           , HH.div
               [ HP.class_ $ ClassName "flex-1 min-h-0 overflow-y-auto" ]
@@ -208,25 +185,34 @@ make = Hooks.component \_ _ -> Hooks.do
 
   maskImage url = "-webkit-mask-image:url(" <> url <> ");mask-image:url(" <> url <> ")"
 
-  -- Horizontal divider between the nav items and the copyright notice.
+  -- Horizontal divider between sections.
   spacer = HH.hr [ HP.class_ $ ClassName "my-3 border-0 border-t border-border" ]
 
-  sideMenuHeadline text = HH.div
-    [ HP.class_ $ ClassName "px-3 pt-2 pb-1.5 text-sm font-semibold uppercase tracking-wider text-brand" ]
-    [ HH.text text ]
-  sideMenuItem r = HH.slot_ (Proxy :: _ "side-menu-item") r SideMenuItem.make { routes: route, label: labelOf r, to: r }
+  -- One sidebar section: a clickable headline pointing at the section landing,
+  -- followed by its pages, then a divider.
+  renderSection st section =
+    [ HH.button
+        [ HP.class_ $ ClassName "block w-full text-left px-3 pt-2 pb-1.5 text-sm font-semibold uppercase tracking-wider text-brand hover:opacity-70 transition-opacity cursor-pointer"
+        , HP.type_ HP.ButtonButton
+        , HE.onClick \_ -> st.navigateTo (docRoute section.landing.path)
+        ]
+        [ HH.text section.title ]
+    ]
+      <> map (\p -> sideMenuItem p.path p.nav) section.pages
+      <> [ spacer ]
+
+  sideMenuItem path label =
+    HH.slot_ (Proxy :: _ "side-menu-item") (docRoute path) SideMenuItem.make
+      { routes: route, label, to: docRoute path }
 
   renderRouterView currentPage = case currentPage of
     Nothing -> HH.text "Page not found"
     Just rt -> case rt of
       Home -> HH.slot_ (Proxy :: _ "home") unit Home.make {}
-      Installation -> renderMarkdownView Installation Content.installation
-      DevelopersGuide -> renderMarkdownView DevelopersGuide Content.developersGuide
-      SupportedFeatures -> renderMarkdownView SupportedFeatures Content.supportedFeatures
-      RuntimeRepresentation -> renderMarkdownView RuntimeRepresentation Content.runtimeRepresentation
-      CompilationPipeline -> renderMarkdownView CompilationPipeline Content.compilationPipeline
-      Optimizations -> renderMarkdownView Optimizations Content.optimizations
-      JsInterop -> renderMarkdownView JsInterop Content.interop
       Search { q } -> HH.slot_ (Proxy :: _ "search") unit SearchView.make { query: q }
+      Doc _ ->
+        maybe (HH.text "Page not found")
+          (\pg -> renderMarkdownView rt pg.html)
+          (Manifest.lookupByPath (routePath rt))
 
   renderMarkdownView r html = HH.slot_ (Proxy :: _ "router-view") r MarkdownView.make { html }

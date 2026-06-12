@@ -6,25 +6,23 @@ import Data.Either (Either(..))
 import Data.Foldable (for_)
 import Effect (Effect)
 import PursWasm.Docs.UI.Base (assetWith, stripBaseWith, withBaseWith)
-import PursWasm.Docs.UI.Route (Route(..), route)
+import PursWasm.Docs.UI.Route (Route(..), docRoute, route, routePath)
 import Routing.Duplex as RD
 import Test.Spec (describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Test.Spec.Reporter (consoleReporter)
 import Test.Spec.Runner.Node (runSpecAndExitProcess)
 
--- Every route value the app can navigate to. `Search` carries a query.
+-- Representative route values the app can navigate to. Docs pages are data
+-- driven, so they are modelled by `Doc` carrying the path segments.
 allRoutes :: Array Route
 allRoutes =
   [ Home
-  , Installation
-  , JsInterop
-  , DevelopersGuide
-  , SupportedFeatures
-  , RuntimeRepresentation
-  , CompilationPipeline
-  , Optimizations
   , Search { q: "effect monad" }
+  , docRoute "/getting-started"
+  , docRoute "/getting-started/ffi-and-js-interop"
+  , docRoute "/dev"
+  , docRoute "/dev/optimizations"
   ]
 
 main :: Effect Unit
@@ -36,14 +34,19 @@ main = runSpecAndExitProcess [ consoleReporter ] do
 
     it "prints the expected paths" do
       RD.print route Home `shouldEqual` "/"
-      RD.print route Installation `shouldEqual` "/installation"
-      RD.print route DevelopersGuide `shouldEqual` "/dev"
-      RD.print route Optimizations `shouldEqual` "/dev/optimizations.md"
+      RD.print route (docRoute "/dev") `shouldEqual` "/dev"
+      RD.print route (docRoute "/dev/optimizations") `shouldEqual` "/dev/optimizations"
+      RD.print route (docRoute "/getting-started/ffi-and-js-interop") `shouldEqual` "/getting-started/ffi-and-js-interop"
       RD.print route (Search { q: "x y" }) `shouldEqual` "/search?q=x%20y"
 
-    it "does not confuse the guide entry with a guide page" do
-      RD.parse route "/dev" `shouldEqual` Right DevelopersGuide
-      RD.parse route "/dev/optimizations.md" `shouldEqual` Right Optimizations
+    it "keeps Home distinct from a docs page and parses paths into Doc" do
+      RD.parse route "/" `shouldEqual` Right Home
+      RD.parse route "/dev" `shouldEqual` Right (Doc [ "dev" ])
+      RD.parse route "/dev/optimizations" `shouldEqual` Right (Doc [ "dev", "optimizations" ])
+
+    it "routePath reconstructs a Doc route's manifest path" do
+      routePath (docRoute "/dev/optimizations") `shouldEqual` "/dev/optimizations"
+      routePath (docRoute "/getting-started") `shouldEqual` "/getting-started"
 
   describe "Base path" do
     it "round-trips withBase / stripBase under a sub-path deploy" do

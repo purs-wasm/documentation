@@ -2,15 +2,20 @@
 // GitHub-compatible heading ids (so in-page #anchor links resolve) and
 // build-time syntax highlighting via `shiki` for purescript / javascript / wat.
 //
-// Two sources feed the same pipeline and the same search index:
-//   * upstream  — the docs synced from the compiler repo (passed as <srcDir>),
-//                 rendered flat into <destDir>, routed under /dev/.
-//   * local     — Markdown committed to this repo under content/, rendered into
-//                 <destDir>/guide and routed under /guide/. A manifest.json
-//                 lists these pages for the app's sidebar.
+// The upstream docs are organised into sibling section directories
+// (getting-started/, developers-guide/, …). This script is *directory driven*:
+// the SECTIONS table below maps each upstream subdirectory to a site section,
+// its route prefix, and the order/labels of its pages. To surface a new section
+// (e.g. design-decisions/) just add an entry — no per-page wiring elsewhere.
+//
+// Outputs into <destDir> (web/docs):
+//   * <dir>/<file>.html            rendered page fragments (per section)
+//   * local/<file>.html            pages authored in this repo under content/
+//   * manifest.json                the section/page tree the SPA reads to build
+//                                  its sidebar, routes, and content lookup
+//   * search-index.json            one record per heading, for full-text search
 //
 // Usage: node web/scripts/render-docs.mjs <srcDir> <destDir>
-//
 // Invoked by scripts/sync-docs.sh. Lives under web/ so it resolves the
 // marked / marked-gfm-heading-id / shiki packages from web/node_modules.
 
@@ -46,6 +51,75 @@ const LANG_ALIASES = {
   wasm: "wasm",
 };
 
+// ---------------------------------------------------------------------------
+// Site information architecture. Each section maps an upstream subdirectory to
+// a route prefix and an ordered page list. `landing` is the page shown at the
+// prefix root (and reached by clicking the sidebar headline); it is either an
+// upstream file (`file`) or a page authored in this repo (`content`). `pages`
+// are listed in order with a short sidebar `nav` label; files not listed are
+// appended alphabetically using their H1 as the label.
+// ---------------------------------------------------------------------------
+const SECTIONS = [
+  {
+    id: "getting-started",
+    title: "Getting Started",
+    dir: "getting-started",
+    prefix: "/getting-started",
+    landing: { file: "overview.md" },
+    pages: [
+      { file: "differences-to-PS-for-JS.md", nav: "Differences from JS" },
+      { file: "ffi-and-js-interop.md", nav: "FFI & JS Interop" },
+      { file: "module-resolution-and-ulib.md", nav: "Modules & ulib" },
+      { file: "performance-and-limitations.md", nav: "Performance & Limits" },
+    ],
+  },
+  {
+    id: "developers-guide",
+    title: "Developer's Guide",
+    dir: "developers-guide",
+    prefix: "/dev",
+    landing: { content: "developers-guide.md" },
+    pages: [
+      { file: "supported-features.md", nav: "Supported Features" },
+      { file: "runtime-representation.md", nav: "Runtime Representation" },
+      { file: "compilation-pipeline.md", nav: "Compilation Pipeline" },
+      { file: "optimizations.md", nav: "Optimizations" },
+      { file: "interop.md", nav: "JS↔WASM Interop" },
+    ],
+  },
+];
+
+// Excluded docs (e.g. design-decisions/) are not part of the site; links to
+// them are rewritten to the source repo on GitHub instead of 404-ing.
+const GH_BLOB = "https://github.com/katsujukou/purescript-backend-wasm/blob/main/docs";
+
+// docs-relative markdown path (e.g. "developers-guide/interop.md") -> app route.
+// A section's landing file maps to the prefix root; other pages drop the
+// extension (so "./interop.md" -> "/dev/interop", clean and dev-server friendly).
+const routeMap = {};
+for (const s of SECTIONS) {
+  if (s.landing.file) routeMap[`${s.dir}/${s.landing.file}`] = s.prefix;
+  for (const p of s.pages) {
+    routeMap[`${s.dir}/${p.file}`] = `${s.prefix}/${p.file.replace(/\.(md|markdown)$/i, "")}`;
+  }
+}
+
+// Rewrite the cross-document .md links in rendered HTML (the upstream docs link
+// each other with relative paths like "./interop.md#anchor"). `fileDir` is the
+// linking file's directory relative to the docs root.
+function rewriteLinks(html, fileDir) {
+  return html.replace(/href="([^"]+)"/g, (whole, href) => {
+    if (/^(https?:|mailto:|#|\/)/i.test(href)) return whole; // external / anchor / already absolute
+    const [rawPath, anchor] = href.split("#");
+    if (!/\.(md|markdown)$/i.test(rawPath)) return whole;
+    const rel = path.posix.normalize(path.posix.join(fileDir, rawPath));
+    const frag = anchor ? `#${anchor}` : "";
+    if (routeMap[rel]) return `href="${routeMap[rel]}${frag}"`;
+    if (rel.startsWith("design-decisions/")) return `href="${GH_BLOB}/${rel}${frag}"`;
+    return whole;
+  });
+}
+
 const highlighter = await createHighlighter({
   themes: [THEMES.light, THEMES.dark],
   langs: ["purescript", "javascript", "wasm"],
@@ -53,23 +127,6 @@ const highlighter = await createHighlighter({
 
 const escapeHtml = (s) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-// Pages reachable as app routes — keep in sync with web/.../UI/Route.purs and
-// MarkdownContent.js. Only these are added to the search index, so every result
-// links to a real page. Keyed by path relative to each source root.
-const ROUTED = {
-  "supported-features.md": { path: "/dev/supported-features.md", title: "Supported Features" },
-  "runtime-representation.md": { path: "/dev/runtime-representation.md", title: "Runtime Representations" },
-  "compilation-pipeline.md": { path: "/dev/compilation-pipeline.md", title: "Compilation Pipeline" },
-  "optimizations.md": { path: "/dev/optimizations.md", title: "Optimizations" },
-  "interop.md": { path: "/dev/interop.md", title: "JS interop" },
-};
-
-// Locally-authored pages under content/ (committed to this repo).
-const LOCAL_ROUTED = {
-  "getting-started.md": { path: "/getting-started", title: "Getting Started" },
-  "developers-guide.md": { path: "/dev", title: "Developer's Guide" },
-};
 
 const stripTags = (s) =>
   s
@@ -82,7 +139,13 @@ const stripTags = (s) =>
     .replace(/\s+/g, " ")
     .trim();
 
-const exists = (p) => fs.stat(p).then(() => true, () => false);
+// First level-1 heading, with inline markdown stripped — used as the page title
+// (search docTitle and the default sidebar label). Falls back to the filename.
+function titleOf(md, file) {
+  const m = md.match(/^#\s+(.+?)\s*$/m);
+  if (m) return m[1].replace(/`/g, "").replace(/[*_]/g, "").trim();
+  return path.basename(file).replace(/\.(md|markdown)$/i, "");
+}
 
 // Split rendered HTML into one search record per heading section, carrying the
 // heading text, its anchor id, and the plain text of the body that follows.
@@ -127,59 +190,75 @@ marked.use({
   },
 });
 
-async function walk(dir) {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  const files = await Promise.all(
-    entries.map((e) => {
-      const full = path.join(dir, e.name);
-      return e.isDirectory() ? walk(full) : Promise.resolve([full]);
-    }),
-  );
-  return files.flat();
-}
+const exists = (p) => fs.stat(p).then(() => true, () => false);
 
-// Render every Markdown file under src to dst (foo.md -> foo.html), copying any
-// other files verbatim. `onDoc(rel, html)` is called for each rendered page.
-async function renderTree(src, dst, onDoc) {
-  let count = 0;
-  for (const file of await walk(src)) {
-    const rel = path.relative(src, file);
-    if (path.basename(rel) === ".DS_Store") continue;
-    if (/\.(md|markdown)$/i.test(rel)) {
-      const html = marked.parse(await fs.readFile(file, "utf8"));
-      const out = path.join(dst, rel.replace(/\.(md|markdown)$/i, ".html"));
-      await fs.mkdir(path.dirname(out), { recursive: true });
-      await fs.writeFile(out, html);
-      count++;
-      if (onDoc) onDoc(rel, html);
-    } else {
-      const out = path.join(dst, rel);
-      await fs.mkdir(path.dirname(out), { recursive: true });
-      await fs.copyFile(file, out);
-    }
-  }
-  return count;
+// Render one Markdown file to <dst>/<relHtml>, returning { title, html }. When
+// `linkDir` is given, cross-document .md links are rewritten to app routes.
+async function renderFile(srcFile, dst, relHtml, linkDir) {
+  const md = await fs.readFile(srcFile, "utf8");
+  let html = marked.parse(md);
+  if (linkDir != null) html = rewriteLinks(html, linkDir);
+  const out = path.join(dst, relHtml);
+  await fs.mkdir(path.dirname(out), { recursive: true });
+  await fs.writeFile(out, html);
+  return { title: titleOf(md, srcFile), html };
 }
 
 const searchIndex = [];
 
-// --- Upstream (synced) docs -> <destDir>, routed under /dev/ ----------------
-const upstreamCount = await renderTree(srcDir, destDir, (rel, html) => {
-  const route = ROUTED[rel];
-  if (route) searchIndex.push(...sectionsOf(html, route));
-});
-
-// --- Local (committed) pages -> <destDir>/local -----------------------------
-let localCount = 0;
-if (await exists(CONTENT_DIR)) {
-  localCount = await renderTree(CONTENT_DIR, path.join(destDir, "local"), (rel, html) => {
-    const route = LOCAL_ROUTED[rel];
-    if (route) searchIndex.push(...sectionsOf(html, route));
-  });
+// Resolve a section page descriptor to its source file + rendered output path.
+function pageSource(section, file) {
+  const rel = `${section.dir}/${file.replace(/\.(md|markdown)$/i, ".html")}`;
+  return { src: path.join(srcDir, section.dir, file), rel };
 }
 
+// --- Render each section, building the manifest -----------------------------
+const manifest = { sections: [] };
+let pageCount = 0;
+
+for (const section of SECTIONS) {
+  const dirPath = path.join(srcDir, section.dir);
+  if (!(await exists(dirPath))) {
+    console.error(`[render-docs] skipping section '${section.id}': ${dirPath} not found`);
+    continue;
+  }
+
+  // Landing page: either an upstream file or one authored under content/.
+  let landing;
+  if (section.landing.content) {
+    const src = path.join(CONTENT_DIR, section.landing.content);
+    const rel = `local/${section.landing.content.replace(/\.(md|markdown)$/i, ".html")}`;
+    const { title, html } = await renderFile(src, destDir, rel);
+    landing = { path: section.prefix, title, html: rel };
+    searchIndex.push(...sectionsOf(html, { path: section.prefix, title }));
+  } else {
+    const { src, rel } = pageSource(section, section.landing.file);
+    const { title, html } = await renderFile(src, destDir, rel, section.dir);
+    landing = { path: section.prefix, title, html: rel };
+    searchIndex.push(...sectionsOf(html, { path: section.prefix, title }));
+  }
+  pageCount++;
+
+  const pages = [];
+  for (const page of section.pages) {
+    const { src, rel } = pageSource(section, page.file);
+    if (!(await exists(src))) {
+      console.error(`[render-docs] WARNING: ${section.id}: ${page.file} not found, skipping`);
+      continue;
+    }
+    const routePath = `${section.prefix}/${page.file.replace(/\.(md|markdown)$/i, "")}`;
+    const { title, html } = await renderFile(src, destDir, rel, section.dir);
+    pages.push({ path: routePath, title, nav: page.nav ?? title, html: rel });
+    searchIndex.push(...sectionsOf(html, { path: routePath, title }));
+    pageCount++;
+  }
+
+  manifest.sections.push({ id: section.id, title: section.title, landing, pages });
+}
+
+await fs.writeFile(path.join(destDir, "manifest.json"), JSON.stringify(manifest));
 await fs.writeFile(path.join(destDir, "search-index.json"), JSON.stringify(searchIndex));
 
 console.error(
-  `[render-docs] upstream ${upstreamCount}, local ${localCount}, ${searchIndex.length} search sections`,
+  `[render-docs] ${manifest.sections.length} sections, ${pageCount} pages, ${searchIndex.length} search sections`,
 );
