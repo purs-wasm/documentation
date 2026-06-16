@@ -6,7 +6,6 @@ import Data.Array (foldMap)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Tuple.Nested ((/\))
 import Effect.Aff.Class (class MonadAff)
-import Effect.Class (liftEffect)
 import Fmt as Fmt
 import Halogen (AttrName(..), ClassName(..))
 import Halogen as H
@@ -22,12 +21,10 @@ import PursWasm.Docs.UI.Manifest as Manifest
 import PursWasm.Docs.UI.Route (Route(..), docRoute, route, routePath)
 import PursWasm.Docs.UI.SideMenuItem as SideMenuItem
 import PursWasm.Docs.UI.Version (pursWasmVersion)
-import PursWasm.Docs.UI.Version as Version
 import PursWasm.Docs.UI.Views.Home as Home
 import PursWasm.Docs.UI.Views.MarkdownView as MarkdownView
 import PursWasm.Docs.UI.Views.Search as SearchView
 import Type.Proxy (Proxy(..))
-import Web.HTML.Window (navigator)
 import Web.UIEvent.KeyboardEvent as KE
 
 make :: forall q i o m. MonadAff m => H.Component q i o m
