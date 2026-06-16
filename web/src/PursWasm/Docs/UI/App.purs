@@ -139,7 +139,7 @@ make = Hooks.component \_ _ -> Hooks.do
                         [ HH.div [ HP.class_ $ ClassName "px-3 pt-3 text-xs leading-relaxed text-fg-muted" ]
                             [ HH.span [ HP.class_ $ ClassName "flex items-center gap-1" ]
                                 [ HH.img
-                                    [ HP.src (Base.asset "img/law-ico.svg") 
+                                    [ HP.src (Base.asset "img/law-ico.svg")
                                     , HP.class_ $ ClassName "w-3 h-3"
                                     ]
                                 , HH.text "MIT licensed"

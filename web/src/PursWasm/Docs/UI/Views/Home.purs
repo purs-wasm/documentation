@@ -52,7 +52,7 @@ make = Hooks.component \_ _ -> Hooks.do
               ]
           , HH.a
               [ HP.class_ $ ClassName "flex gap-5 items-center"
-              , HP.href "https://github.com/purs-wasm/purescript-backend-wasm" 
+              , HP.href "https://github.com/purs-wasm/purescript-backend-wasm"
               , HP.target "_blank"
               , HP.rel "noopener noreferrer"
               ]
