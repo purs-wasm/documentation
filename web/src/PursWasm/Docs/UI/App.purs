@@ -13,6 +13,7 @@ import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Halogen.Hooks (useLifecycleEffect)
 import Halogen.Hooks as Hooks
 import PursWasm.Docs.UI.Base as Base
 import PursWasm.Docs.UI.Hooks.UseApp (Theme(..), useApp)
@@ -26,6 +27,7 @@ import PursWasm.Docs.UI.Views.Home as Home
 import PursWasm.Docs.UI.Views.MarkdownView as MarkdownView
 import PursWasm.Docs.UI.Views.Search as SearchView
 import Type.Proxy (Proxy(..))
+import Web.HTML.Window (navigator)
 import Web.UIEvent.KeyboardEvent as KE
 
 make :: forall q i o m. MonadAff m => H.Component q i o m
@@ -35,6 +37,10 @@ make = Hooks.component \_ _ -> Hooks.do
   query /\ queryId <- Hooks.useState ""
   menuOpen /\ menuOpenId <- Hooks.useState false
   searchFocused /\ searchFocusedId <- Hooks.useState false
+
+  useLifecycleEffect do
+    navigator.initialize
+    pure Nothing
 
   Hooks.pure $ render
     { currentPage: navigator.currentRoute
