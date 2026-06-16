@@ -27,6 +27,7 @@
   --color-brand: #7452d6;       /* logo / h1 / sidebar headline */
   --color-purs: #14161A;
   --color-wasm: #654ff0;
+  --color-github: #24292e;
 }
 
 .dark {
@@ -43,6 +44,7 @@
   --color-brand: #b69bff;
   --color-purs: #EBE9E5;
   --color-wasm: #7f6cfb;
+  --color-github: #f0f6fc;
 }
 
 @layer base {

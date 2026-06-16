@@ -4,6 +4,7 @@ package:
     - aff
     - arrays
     - effect
+    - fmt
     - halogen
     - halogen-helix
     - halogen-hooks
@@ -17,5 +18,5 @@ package:
   test:
     main: Test.PursWasm.Docs.Main
     dependencies:
-      - spec 
+      - spec
       - spec-node

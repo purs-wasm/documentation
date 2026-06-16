@@ -86,6 +86,7 @@ const SECTIONS = [
       { file: "compilation-pipeline.md", nav: "Compilation Pipeline" },
       { file: "optimizations.md", nav: "Optimizations" },
       { file: "interop.md", nav: "JS↔WASM Interop" },
+      { file: "a-tour-for-hackers.md", nav: "A Tour for Hackers"}
     ],
   },
 ];
